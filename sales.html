@@ -16,7 +16,7 @@
     --text-dim:#6b7360;
     --text-dimmer:#9a9d84;
     --green:#123b2c;
-    --green-text:#123b2c;
+    --green-text:#1b7a4d;
     --green-soft:rgba(18,59,44,0.09);
     --gold:#b4901f;
     --gold-soft:rgba(180,144,31,0.12);
@@ -693,6 +693,23 @@
   window.addEventListener('storage', function(e){
     if(e.key === 'spade-theme') applyTheme();
   });
+
+  // If embedded in the Business Dashboard's iframe, make the backlink switch
+  // views there instead of loading a full nested copy of the dashboard.
+  (function(){
+    var backlink = document.querySelector('.backlink');
+    if(!backlink) return;
+    if(window.self === window.top) return;
+    backlink.addEventListener('click', function(e){
+      try{
+        var parentNav = window.parent.document.getElementById('navDashboard');
+        if(parentNav){
+          e.preventDefault();
+          parentNav.click();
+        }
+      }catch(err){}
+    });
+  })();
 
   renderAll();
   init();
