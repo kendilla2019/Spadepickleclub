@@ -16,6 +16,7 @@
     --text-dim:#6b7360;
     --text-dimmer:#9a9d84;
     --green:#123b2c;
+    --green-text:#123b2c;
     --green-soft:rgba(18,59,44,0.09);
     --gold:#b4901f;
     --gold-soft:rgba(180,144,31,0.12);
@@ -29,7 +30,20 @@
     padding-top:env(safe-area-inset-top,0px);
     padding-bottom:env(safe-area-inset-bottom,0px);
   }
-  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  :root[data-theme="dark"]{
+    --bg:#0d1f17;
+    --card-bg:#123024;
+    --card-bg-soft:#0f2a1e;
+    --border:#1f4634;
+    --border-soft:#1a3b2b;
+    --text:#f4efdd;
+    --text-dim:#a9c2ac;
+    --text-dimmer:#728372;
+    --gold-border:#5c4a1a;
+    --green-text:#7fce9c;
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg);}
+  body,html{transition:background .2s ease,color .2s ease;}
   *{box-sizing:border-box;}
   body{
     margin:0;
@@ -50,7 +64,7 @@
     padding:8px 14px;border-radius:9px;border:1px solid var(--border);
     background:var(--card-bg);white-space:nowrap;
   }
-  .backlink:hover{color:var(--green);border-color:var(--green);}
+  .backlink:hover{color:var(--green-text);border-color:var(--green-text);}
   .addbtn{
     padding:9px 16px;border-radius:9px;border:none;
     background:var(--green);color:#fdf9ec;font-weight:600;font-size:13.5px;
@@ -58,14 +72,14 @@
   }
   .addbtn:hover{opacity:0.92;}
   .sub{font-size:13px;color:var(--text-dim);margin:0 0 22px;}
-  .sub b{color:var(--green);}
+  .sub b{color:var(--green-text);}
 
   .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
   .stat{background:var(--card-bg);border:1px solid var(--border-soft);border-radius:var(--radius);padding:16px 18px;}
   .stat .label{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
   .stat .value{font-size:21px;font-weight:700;}
   .stat.gold .value{color:var(--gold);}
-  .stat.green .value{color:var(--green);}
+  .stat.green .value{color:var(--green-text);}
   .stat.red .value{color:var(--red);}
 
   .layout{display:grid;grid-template-columns:1.1fr 0.9fr;gap:18px;margin-bottom:20px;}
@@ -82,7 +96,7 @@
     width:28px;height:28px;border-radius:7px;border:1px solid var(--border);
     background:var(--card-bg-soft);cursor:pointer;font-size:13px;color:var(--text-dim);
   }
-  .cal-nav button:hover{color:var(--green);border-color:var(--green);}
+  .cal-nav button:hover{color:var(--green-text);border-color:var(--green-text);}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
   .cal-dow{font-size:10.5px;text-align:center;color:var(--text-dimmer);padding-bottom:4px;font-weight:600;}
   .cal-cell{
@@ -91,14 +105,14 @@
     cursor:pointer;font-size:12px;position:relative;background:var(--card-bg-soft);
     padding:3px;gap:2px;
   }
-  .cal-cell:hover{border-color:var(--green);}
+  .cal-cell:hover{border-color:var(--green-text);}
   .cal-cell.empty{visibility:hidden;cursor:default;}
   .cal-cell.sunday{border-color:var(--gold-border);box-shadow:inset 0 0 0 1.5px var(--gold-border);}
   .cal-cell .d{font-weight:600;color:var(--text-dim);}
   .cal-cell.has-session{background:var(--green-soft);}
-  .cal-cell.has-session .d{color:var(--green);}
-  .cal-cell .amt{font-size:9.5px;font-weight:700;color:var(--green);white-space:nowrap;}
-  .cal-cell.today{outline:2px solid var(--green);outline-offset:-2px;}
+  .cal-cell.has-session .d{color:var(--green-text);}
+  .cal-cell .amt{font-size:9.5px;font-weight:700;color:var(--green-text);white-space:nowrap;}
+  .cal-cell.today{outline:2px solid var(--green-text);outline-offset:-2px;}
 
   /* Weekly / session log table */
   .tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
@@ -108,7 +122,7 @@
   .tbl tr.rowbtn{cursor:pointer;}
   .tbl tr.rowbtn:hover{background:var(--card-bg-soft);}
   .tbl td.num{text-align:right;font-variant-numeric:tabular-nums;}
-  .tbl td.pos{color:var(--green);font-weight:600;}
+  .tbl td.pos{color:var(--green-text);font-weight:600;}
   .tbl td.neg{color:var(--red);font-weight:600;}
   .empty-state{padding:26px 10px;text-align:center;color:var(--text-dimmer);font-size:12.5px;}
 
@@ -140,20 +154,20 @@
     width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);
     font-size:14px;color:var(--text);background:var(--card-bg-soft);
   }
-  .field input:focus{outline:none;border-color:var(--green);}
+  .field input:focus{outline:none;border-color:var(--green-text);}
   .quickrow{display:flex;gap:8px;margin-bottom:10px;}
   .qbtn{
     flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
     background:var(--card-bg-soft);cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text-dim);
   }
-  .qbtn:hover{border-color:var(--green);color:var(--green);}
+  .qbtn:hover{border-color:var(--green-text);color:var(--green-text);}
   .qbtn.sel{background:var(--green);border-color:var(--green);color:#fdf9ec;}
   .calcline{
     display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-dim);
     padding:8px 0;border-top:1px dashed var(--border);margin-top:2px;
   }
   .calcline b{color:var(--text);}
-  .netline{font-size:15px;font-weight:700;color:var(--green);}
+  .netline{font-size:15px;font-weight:700;color:var(--green-text);}
   .modal-actions{display:flex;gap:8px;margin-top:18px;}
   .btn-save{
     flex:1;padding:11px 0;border-radius:9px;border:none;background:var(--green);
@@ -524,8 +538,10 @@
     var statusEl = document.getElementById("mStatus");
     statusEl.textContent = "Saving…";
     saveSession(data).then(function(){
+      sessions[data.date] = data;
+      renderAll();
       statusEl.textContent = "Saved.";
-      setTimeout(closeModal, 350);
+      setTimeout(closeModal, 150);
     }).catch(function(err){
       statusEl.textContent = "Couldn't save — " + (err.message||"try again.");
     });
@@ -536,6 +552,8 @@
     var statusEl = document.getElementById("mStatus");
     statusEl.textContent = "Deleting…";
     deleteSession(editingDate).then(function(){
+      delete sessions[editingDate];
+      renderAll();
       closeModal();
     }).catch(function(err){
       statusEl.textContent = "Couldn't delete — " + (err.message||"try again.");
@@ -629,6 +647,21 @@
         .subscribe();
     }
   }
+
+  function applyTheme(){
+    try{
+      var saved = localStorage.getItem('spade-theme');
+      if(saved === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    }catch(e){}
+  }
+  applyTheme();
+  window.addEventListener('storage', function(e){
+    if(e.key === 'spade-theme') applyTheme();
+  });
 
   renderAll();
   init();

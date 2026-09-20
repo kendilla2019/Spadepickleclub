@@ -259,6 +259,9 @@
 
   /* ---------- Income overview / trend ---------- */
   .trend-card{background:var(--card-bg);border:1px solid var(--border-soft);border-radius:var(--radius);padding:22px;}
+  .hidden{display:none !important;}
+  #dashboardView,#salesView{animation:viewFadeIn .28s ease;}
+  @keyframes viewFadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
   .trend-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dimmer);margin-top:8px;padding:0 6px;}
 
   @media (max-width:980px){
@@ -300,7 +303,7 @@
     </div>
 
     <div class="navgroup">
-      <div class="navlink active">
+      <div class="navlink active" id="navDashboard" style="cursor:pointer;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
         Dashboard
       </div>
@@ -382,6 +385,13 @@
       <button class="chip-btn">Sign out</button>
     </div>
 
+    <div id="salesView" class="hidden">
+      <div class="trend-card" style="padding:0;overflow:hidden;">
+        <iframe id="salesFrame" src="sales.html" title="Sales Dashboard" style="width:100%;height:1400px;border:0;display:block;"></iframe>
+      </div>
+    </div>
+
+    <div id="dashboardView">
     <div class="goal-banner">
       <span class="dot"></span>
       Monthly income goal is at <strong>61%</strong> (₱91,200.00 of ₱150,000.00).
@@ -511,9 +521,6 @@
         <span>Week 4 · ₱26,000</span>
       </div>
     </div>
-
-    <div class="trend-card" id="salesSection" style="padding:0;overflow:hidden;">
-      <iframe src="sales.html" title="Sales Dashboard" style="width:100%;height:1400px;border:0;display:block;"></iframe>
     </div>
 
   </main>
@@ -547,13 +554,32 @@
     var opts = { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' };
     document.getElementById('updatedChip').textContent = 'Updated ' + now.toLocaleString('en-US', opts);
 
-    var salesNav = document.getElementById('navSales');
-    var salesSection = document.getElementById('salesSection');
-    if(salesNav && salesSection){
-      salesNav.addEventListener('click', function(){
-        salesSection.scrollIntoView({ behavior:'smooth', block:'start' });
-      });
+    var navSales = document.getElementById('navSales');
+    var navDashboard = document.getElementById('navDashboard');
+    var salesView = document.getElementById('salesView');
+    var dashboardView = document.getElementById('dashboardView');
+    var pageTitle = document.querySelector('.topbar h2');
+
+    function replay(el){
+      el.style.animation = 'none';
+      void el.offsetWidth;
+      el.style.animation = '';
     }
+
+    function showView(view){
+      var toShow = view === 'sales' ? salesView : dashboardView;
+      var toHide = view === 'sales' ? dashboardView : salesView;
+      toHide.classList.add('hidden');
+      toShow.classList.remove('hidden');
+      replay(toShow);
+      navSales.classList.toggle('active', view === 'sales');
+      navDashboard.classList.toggle('active', view !== 'sales');
+      if(pageTitle) pageTitle.textContent = view === 'sales' ? 'Sales' : 'Dashboard';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if(navSales) navSales.addEventListener('click', function(){ showView('sales'); });
+    if(navDashboard) navDashboard.addEventListener('click', function(){ showView('dashboard'); });
   })();
 </script>
 </body>
