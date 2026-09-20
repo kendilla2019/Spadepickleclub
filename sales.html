@@ -179,6 +179,13 @@
     color:var(--red);font-weight:600;font-size:13.5px;cursor:pointer;
   }
   .savestatus{font-size:11.5px;color:var(--text-dimmer);text-align:center;margin-top:8px;height:14px;}
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);
+    background:var(--red);color:#fdf9ec;padding:11px 18px;border-radius:9px;
+    font-size:13px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,0.25);
+    z-index:80;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
   @media (max-width:900px){
     .stat-grid{grid-template-columns:repeat(2,1fr);}
@@ -187,6 +194,7 @@
 </style>
 </head>
 <body>
+<div class="toast" id="toast"></div>
 <div class="wrap">
 
   <div class="topbar">
@@ -523,6 +531,15 @@
     }
   });
 
+  var toastTimer = null;
+  function showToast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 4000);
+  }
+
   document.getElementById("mSave").addEventListener("click", function(){
     if(!editingDate){ return; }
     var data = {
@@ -535,28 +552,33 @@
       courtCost: parseFloat(document.getElementById("fCost").value)||0,
       updatedAt: Date.now()
     };
-    var statusEl = document.getElementById("mStatus");
-    statusEl.textContent = "Saving…";
-    saveSession(data).then(function(){
-      sessions[data.date] = data;
+    var previous = sessions[data.date];
+
+    // Optimistic: reflect the save immediately, sync in the background.
+    sessions[data.date] = data;
+    renderAll();
+    closeModal();
+
+    saveSession(data).catch(function(err){
+      if(previous){ sessions[data.date] = previous; } else { delete sessions[data.date]; }
       renderAll();
-      statusEl.textContent = "Saved.";
-      setTimeout(closeModal, 150);
-    }).catch(function(err){
-      statusEl.textContent = "Couldn't save — " + (err.message||"try again.");
+      showToast("Couldn't save session — " + (err.message||"try again."));
     });
   });
 
   document.getElementById("mDelete").addEventListener("click", function(){
     if(!editingDate) return;
-    var statusEl = document.getElementById("mStatus");
-    statusEl.textContent = "Deleting…";
-    deleteSession(editingDate).then(function(){
-      delete sessions[editingDate];
-      renderAll();
-      closeModal();
-    }).catch(function(err){
-      statusEl.textContent = "Couldn't delete — " + (err.message||"try again.");
+    var dateStr = editingDate;
+    var previous = sessions[dateStr];
+
+    // Optimistic: remove immediately, sync in the background.
+    delete sessions[dateStr];
+    renderAll();
+    closeModal();
+
+    deleteSession(dateStr).catch(function(err){
+      if(previous){ sessions[dateStr] = previous; renderAll(); }
+      showToast("Couldn't delete session — " + (err.message||"try again."));
     });
   });
 
@@ -622,16 +644,25 @@
     renderAll();
   }
 
+  function withTimeout(promise, ms){
+    return Promise.race([
+      promise,
+      new Promise(function(_, reject){
+        setTimeout(function(){ reject(new Error("Request timed out — check your connection.")); }, ms);
+      })
+    ]);
+  }
+
   async function saveSession(data){
     if(!supa) throw new Error("Supabase not configured");
     var row = sessionToRow(data);
-    var res = await supa.from("sessions").upsert(row, {onConflict:"date"});
+    var res = await withTimeout(supa.from("sessions").upsert(row, {onConflict:"date"}), 12000);
     if(res.error) throw res.error;
   }
 
   async function deleteSession(dateStr){
     if(!supa) throw new Error("Supabase not configured");
-    var res = await supa.from("sessions").delete().eq("date", dateStr);
+    var res = await withTimeout(supa.from("sessions").delete().eq("date", dateStr), 12000);
     if(res.error) throw res.error;
   }
 
