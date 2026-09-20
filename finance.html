@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spade Pickle Club — Finance</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f7f3e7;
+    --card-bg:#ffffff;
+    --card-bg-soft:#f9f5e9;
+    --border:#e3dcc2;
+    --border-soft:#ece5cf;
+    --text:#14261f;
+    --text-dim:#6b7360;
+    --text-dimmer:#9a9d84;
+    --green:#123b2c;
+    --green-text:#1b7a4d;
+    --green-soft:rgba(18,59,44,0.09);
+    --gold:#b4901f;
+    --gold-soft:rgba(180,144,31,0.12);
+    --gold-border:#d8c584;
+    --bronze:#8c6a2f;
+    --sage:#4f7a5d;
+    --red:#b0453c;
+    --red-soft:rgba(176,69,60,0.10);
+    --radius:14px;
+    --radius-sm:9px;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1f17;
+    --card-bg:#123024;
+    --card-bg-soft:#0f2a1e;
+    --border:#1f4634;
+    --border-soft:#1a3b2b;
+    --text:#f4efdd;
+    --text-dim:#a9c2ac;
+    --text-dimmer:#728372;
+    --gold-border:#5c4a1a;
+    --green-text:#7fce9c;
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg);}
+  body,html{transition:background .2s ease,color .2s ease;}
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 70px;}
+
+  .topbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;}
+  .topbar h1{font-size:24px;margin:0;font-weight:700;margin-right:auto;}
+  .backlink{
+    font-size:12.5px;color:var(--text-dim);
+    padding:8px 14px;border-radius:9px;border:1px solid var(--border);
+    background:var(--card-bg);white-space:nowrap;
+  }
+  .backlink:hover{color:var(--green-text);border-color:var(--green-text);}
+  .addbtn{
+    padding:9px 16px;border-radius:9px;border:none;
+    background:var(--green);color:#fdf9ec;font-weight:600;font-size:13.5px;
+    cursor:pointer;white-space:nowrap;
+  }
+  .addbtn:hover{opacity:0.92;}
+  .sub{font-size:13px;color:var(--text-dim);margin:0 0 22px;}
+  .sub b{color:var(--green-text);}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+  .stat{background:var(--card-bg);border:1px solid var(--border-soft);border-radius:var(--radius);padding:16px 18px;}
+  .stat .label{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+  .stat .value{font-size:21px;font-weight:700;}
+  .stat.gold .value{color:var(--gold);}
+  .stat.green .value{color:var(--green-text);}
+  .stat.red .value{color:var(--red);}
+
+  .card{background:var(--card-bg);border:1px solid var(--border-soft);border-radius:var(--radius);padding:20px;}
+  .card h2{font-size:15.5px;margin:0 0 4px;font-weight:600;}
+  .card .cardsub{font-size:12.5px;color:var(--text-dim);margin:0 0 16px;}
+
+  /* Entry log table */
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .tbl th{text-align:left;color:var(--text-dim);font-weight:600;font-size:11px;padding:6px 8px;border-bottom:1px solid var(--border-soft);}
+  .tbl td{padding:9px 8px;border-bottom:1px solid var(--border-soft);}
+  .tbl tr:last-child td{border-bottom:none;}
+  .tbl tr.rowbtn{cursor:pointer;}
+  .tbl tr.rowbtn:hover{background:var(--card-bg-soft);}
+  .tbl th.num,.tbl td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .empty-state{padding:26px 10px;text-align:center;color:var(--text-dimmer);font-size:12.5px;}
+  .catbadge{
+    display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;
+  }
+  .catbadge.Assets{background:var(--green-soft);color:var(--green-text);}
+  .catbadge.Liabilities{background:var(--red-soft);color:var(--red);}
+  .catbadge.Capital{background:var(--gold-soft);color:var(--gold);}
+  .catbadge.Sales{background:var(--green-soft);color:var(--green-text);}
+  .catbadge.Expenses{background:var(--red-soft);color:var(--red);}
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,38,31,0.45);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:16px;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--card-bg);border-radius:16px;max-width:420px;width:100%;
+    padding:24px;max-height:90vh;overflow-y:auto;
+  }
+  .modal h3{margin:0 0 4px;font-size:17px;}
+  .modal .mclose{
+    float:right;background:none;border:none;font-size:18px;color:var(--text-dim);cursor:pointer;
+    line-height:1;padding:2px 6px;
+  }
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px;font-weight:600;}
+  .field input,.field select{
+    width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);
+    font-size:14px;color:var(--text);background:var(--card-bg-soft);
+  }
+  .field input:focus,.field select:focus{outline:none;border-color:var(--green-text);}
+  .modal-actions{display:flex;gap:8px;margin-top:18px;}
+  .btn-save{
+    flex:1;padding:11px 0;border-radius:9px;border:none;background:var(--green);
+    color:#fdf9ec;font-weight:700;font-size:13.5px;cursor:pointer;
+  }
+  .btn-save:hover{opacity:0.92;}
+  .btn-del{
+    padding:11px 16px;border-radius:9px;border:1px solid var(--red);background:var(--red-soft);
+    color:var(--red);font-weight:600;font-size:13.5px;cursor:pointer;
+  }
+  .savestatus{font-size:11.5px;color:var(--text-dimmer);text-align:center;margin-top:8px;height:14px;}
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);
+    background:var(--red);color:#fdf9ec;padding:11px 18px;border-radius:9px;
+    font-size:13px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,0.25);
+    z-index:80;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:900px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>💰 Finance</h1>
+    <a class="backlink" href="https://kendilla2019.github.io/Spadepickleclub/">← Business Dashboard</a>
+    <button class="addbtn" id="openAddBtn">+ Add Entry</button>
+  </div>
+  <p class="sub">Spade Pickle Club — track <b>Assets</b>, <b>Liabilities</b>, <b>Capital</b>, <b>Sales</b>, and <b>Expenses</b> in one place.</p>
+
+  <div class="stat-grid">
+    <div class="stat green"><div class="label">Assets</div><div class="value" id="statAssets">₱0</div></div>
+    <div class="stat red"><div class="label">Liabilities</div><div class="value" id="statLiabilities">₱0</div></div>
+    <div class="stat gold"><div class="label">Capital</div><div class="value" id="statCapital">₱0</div></div>
+    <div class="stat green"><div class="label">Sales</div><div class="value" id="statSales">₱0</div></div>
+    <div class="stat red"><div class="label">Expenses</div><div class="value" id="statExpenses">₱0</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Entry log</h2>
+    <p class="cardsub">Every entry, most recent first. Tap a row to edit.</p>
+    <table class="tbl">
+      <thead>
+        <tr><th>Date</th><th>Category</th><th>Description</th><th class="num">Amount</th></tr>
+      </thead>
+      <tbody id="logBody">
+        <tr><td colspan="4"><div class="empty-state">Loading…</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="mclose" id="mClose">✕</button>
+    <h3 id="mTitle">Add entry</h3>
+    <p class="cardsub" style="margin-bottom:16px;">Log an amount under one of the five categories.</p>
+
+    <div class="field">
+      <label>Date</label>
+      <input type="date" id="fDate">
+    </div>
+
+    <div class="field">
+      <label>Category</label>
+      <select id="fCategory">
+        <option value="Assets">Assets</option>
+        <option value="Liabilities">Liabilities</option>
+        <option value="Capital">Capital</option>
+        <option value="Sales">Sales</option>
+        <option value="Expenses">Expenses</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Description</label>
+      <input type="text" id="fDesc" placeholder="e.g. Abono - advance booking">
+    </div>
+
+    <div class="field">
+      <label>Amount (₱)</label>
+      <input type="number" id="fAmount" placeholder="0">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-del" id="mDelete" style="display:none;">Delete</button>
+      <button class="btn-save" id="mSave">Save entry</button>
+    </div>
+    <div class="savestatus" id="mStatus"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var entries = {}; // id -> {id, date, category, description, amount}
+  var editingId = null;
+  var CATEGORIES = ["Assets","Liabilities","Capital","Sales","Expenses"];
+
+  function pesos(n){
+    n = Math.round(n||0);
+    return "₱" + n.toLocaleString("en-US");
+  }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+
+  // ---------- Rendering ----------
+  function renderStats(){
+    var totals = {};
+    CATEGORIES.forEach(function(c){ totals[c] = 0; });
+    Object.keys(entries).forEach(function(id){
+      var e = entries[id];
+      if(totals.hasOwnProperty(e.category)) totals[e.category] += e.amount||0;
+    });
+    document.getElementById("statAssets").textContent = pesos(totals.Assets);
+    document.getElementById("statLiabilities").textContent = pesos(totals.Liabilities);
+    document.getElementById("statCapital").textContent = pesos(totals.Capital);
+    document.getElementById("statSales").textContent = pesos(totals.Sales);
+    document.getElementById("statExpenses").textContent = pesos(totals.Expenses);
+  }
+
+  function renderLog(){
+    var body = document.getElementById("logBody");
+    var ids = Object.keys(entries).sort(function(a,b){
+      var ea = entries[a], eb = entries[b];
+      if(ea.date !== eb.date) return ea.date < eb.date ? 1 : -1;
+      return String(b).localeCompare(String(a));
+    });
+    if(ids.length===0){
+      body.innerHTML = '<tr><td colspan="4"><div class="empty-state">No entries logged yet — click + Add Entry.</div></td></tr>';
+      return;
+    }
+    body.innerHTML = "";
+    ids.forEach(function(id){
+      var e = entries[id];
+      var dLabel = new Date(e.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+      var tr = document.createElement("tr");
+      tr.className = "rowbtn";
+      tr.innerHTML = "<td>"+dLabel+"</td>"+
+        "<td><span class='catbadge "+e.category+"'>"+e.category+"</span></td>"+
+        "<td>"+(e.description ? escapeHtml(e.description) : "<span style='color:var(--text-dimmer)'>—</span>")+"</td>"+
+        "<td class='num'>"+pesos(e.amount)+"</td>";
+      tr.addEventListener("click", function(theId){ return function(){ openModal(theId); }; }(id));
+      body.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function renderAll(){
+    renderStats(); renderLog();
+  }
+
+  // ---------- Modal ----------
+  function openModal(id){
+    editingId = id || null;
+    var existing = id ? entries[id] : null;
+    if(existing){
+      document.getElementById("mTitle").textContent = "Edit entry";
+      document.getElementById("fDate").value = existing.date;
+      document.getElementById("fCategory").value = existing.category;
+      document.getElementById("fDesc").value = existing.description||"";
+      document.getElementById("fAmount").value = existing.amount||0;
+      document.getElementById("mDelete").style.display = "block";
+    } else {
+      document.getElementById("mTitle").textContent = "Add entry";
+      document.getElementById("fDate").value = todayStr();
+      document.getElementById("fCategory").value = "Assets";
+      document.getElementById("fDesc").value = "";
+      document.getElementById("fAmount").value = "";
+      document.getElementById("mDelete").style.display = "none";
+    }
+    document.getElementById("mStatus").textContent = "";
+    document.getElementById("overlay").classList.add("open");
+  }
+  function closeModal(){
+    document.getElementById("overlay").classList.remove("open");
+    editingId = null;
+  }
+
+  document.getElementById("openAddBtn").addEventListener("click", function(){ openModal(null); });
+  document.getElementById("mClose").addEventListener("click", closeModal);
+  document.getElementById("overlay").addEventListener("click", function(e){ if(e.target.id==="overlay") closeModal(); });
+
+  var toastTimer = null;
+  function showToast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 4000);
+  }
+
+  document.getElementById("mSave").addEventListener("click", function(){
+    var data = {
+      date: document.getElementById("fDate").value,
+      category: document.getElementById("fCategory").value,
+      description: document.getElementById("fDesc").value.trim(),
+      amount: parseFloat(document.getElementById("fAmount").value)||0
+    };
+    if(!data.date || !data.category) return;
+
+    if(editingId){
+      var previous = entries[editingId];
+      entries[editingId] = Object.assign({id: editingId}, data);
+      renderAll();
+      closeModal();
+      updateEntry(editingId, data).catch(function(err){
+        entries[editingId] = previous;
+        renderAll();
+        showToast("Couldn't save entry — " + (err.message||"try again."));
+      });
+    } else {
+      var tmpId = "tmp-" + Date.now();
+      entries[tmpId] = Object.assign({id: tmpId}, data);
+      renderAll();
+      closeModal();
+      insertEntry(data).then(function(realId){
+        delete entries[tmpId];
+        entries[realId] = Object.assign({id: realId}, data);
+        renderAll();
+      }).catch(function(err){
+        delete entries[tmpId];
+        renderAll();
+        showToast("Couldn't save entry — " + (err.message||"try again."));
+      });
+    }
+  });
+
+  document.getElementById("mDelete").addEventListener("click", function(){
+    if(!editingId) return;
+    var id = editingId;
+    var previous = entries[id];
+    delete entries[id];
+    renderAll();
+    closeModal();
+    deleteEntry(id).catch(function(err){
+      entries[id] = previous;
+      renderAll();
+      showToast("Couldn't delete entry — " + (err.message||"try again."));
+    });
+  });
+
+  // ---------- Supabase config (same project as sales.html) ----------
+  var SUPABASE_URL = "https://zqumzdqeuikwwksozntz.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_W3MxRtC6pLfvWXANZXy5cw_vWk7h6Cy";
+
+  var supa = null;
+  if(window.supabase && SUPABASE_URL.indexOf("PASTE_") !== 0){
+    supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
+  function rowToEntry(r){
+    return { id: r.id, date: r.entry_date, category: r.category, description: r.description, amount: r.amount };
+  }
+  function entryToRow(e){
+    return { entry_date: e.date, category: e.category, description: e.description, amount: e.amount };
+  }
+
+  function withTimeout(promise, ms){
+    return Promise.race([
+      promise,
+      new Promise(function(_, reject){
+        setTimeout(function(){ reject(new Error("Request timed out — check your connection.")); }, ms);
+      })
+    ]);
+  }
+
+  async function loadAll(){
+    if(!supa){
+      document.getElementById("logBody").innerHTML =
+        '<tr><td colspan="4"><div class="empty-state">Supabase isn\'t configured yet.</div></td></tr>';
+      renderAll();
+      return;
+    }
+    var res = await supa.from("finance_entries").select("*");
+    if(res.error){
+      document.getElementById("logBody").innerHTML =
+        '<tr><td colspan="4"><div class="empty-state">Couldn\'t load entries: '+res.error.message+'</div></td></tr>';
+      return;
+    }
+    entries = {};
+    (res.data||[]).forEach(function(r){ entries[r.id] = rowToEntry(r); });
+    renderAll();
+  }
+
+  async function insertEntry(data){
+    if(!supa) throw new Error("Supabase not configured");
+    var row = entryToRow(data);
+    var res = await withTimeout(supa.from("finance_entries").insert(row).select().single(), 12000);
+    if(res.error) throw res.error;
+    return res.data.id;
+  }
+  async function updateEntry(id, data){
+    if(!supa) throw new Error("Supabase not configured");
+    var row = entryToRow(data);
+    var res = await withTimeout(supa.from("finance_entries").update(row).eq("id", id), 12000);
+    if(res.error) throw res.error;
+  }
+  async function deleteEntry(id){
+    if(!supa) throw new Error("Supabase not configured");
+    var res = await withTimeout(supa.from("finance_entries").delete().eq("id", id), 12000);
+    if(res.error) throw res.error;
+  }
+
+  function init(){
+    loadAll();
+    if(supa){
+      supa.channel("finance-entries-changes")
+        .on("postgres_changes", {event:"*", schema:"public", table:"finance_entries"}, function(){
+          loadAll();
+        })
+        .subscribe();
+    }
+  }
+
+  function applyTheme(){
+    try{
+      var saved = localStorage.getItem('spade-theme');
+      if(saved === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    }catch(e){}
+  }
+  applyTheme();
+  window.addEventListener('storage', function(e){
+    if(e.key === 'spade-theme') applyTheme();
+  });
+
+  renderAll();
+  init();
+})();
+</script>
+</body>
+</html>
