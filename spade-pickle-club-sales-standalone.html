@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spade Pickle Club — Sales Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f7f3e7;
+    --card-bg:#ffffff;
+    --card-bg-soft:#f9f5e9;
+    --border:#e3dcc2;
+    --border-soft:#ece5cf;
+    --text:#14261f;
+    --text-dim:#6b7360;
+    --text-dimmer:#9a9d84;
+    --green:#123b2c;
+    --green-soft:rgba(18,59,44,0.09);
+    --gold:#b4901f;
+    --gold-soft:rgba(180,144,31,0.12);
+    --gold-border:#d8c584;
+    --bronze:#8c6a2f;
+    --sage:#4f7a5d;
+    --red:#b0453c;
+    --red-soft:rgba(176,69,60,0.10);
+    --radius:14px;
+    --radius-sm:9px;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 70px;}
+
+  .topbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;}
+  .topbar h1{font-size:24px;margin:0;font-weight:700;margin-right:auto;}
+  .backlink{
+    font-size:12.5px;color:var(--text-dim);
+    padding:8px 14px;border-radius:9px;border:1px solid var(--border);
+    background:var(--card-bg);white-space:nowrap;
+  }
+  .backlink:hover{color:var(--green);border-color:var(--green);}
+  .addbtn{
+    padding:9px 16px;border-radius:9px;border:none;
+    background:var(--green);color:#fdf9ec;font-weight:600;font-size:13.5px;
+    cursor:pointer;white-space:nowrap;
+  }
+  .addbtn:hover{opacity:0.92;}
+  .sub{font-size:13px;color:var(--text-dim);margin:0 0 22px;}
+  .sub b{color:var(--green);}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+  .stat{background:var(--card-bg);border:1px solid var(--border-soft);border-radius:var(--radius);padding:16px 18px;}
+  .stat .label{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+  .stat .value{font-size:21px;font-weight:700;}
+  .stat.gold .value{color:var(--gold);}
+  .stat.green .value{color:var(--green);}
+  .stat.red .value{color:var(--red);}
+
+  .layout{display:grid;grid-template-columns:1.1fr 0.9fr;gap:18px;margin-bottom:20px;}
+
+  .card{background:var(--card-bg);border:1px solid var(--border-soft);border-radius:var(--radius);padding:20px;}
+  .card h2{font-size:15.5px;margin:0 0 4px;font-weight:600;}
+  .card .cardsub{font-size:12.5px;color:var(--text-dim);margin:0 0 16px;}
+
+  /* Calendar */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .cal-head .month{font-size:15px;font-weight:700;}
+  .cal-nav{display:flex;gap:6px;}
+  .cal-nav button{
+    width:28px;height:28px;border-radius:7px;border:1px solid var(--border);
+    background:var(--card-bg-soft);cursor:pointer;font-size:13px;color:var(--text-dim);
+  }
+  .cal-nav button:hover{color:var(--green);border-color:var(--green);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+  .cal-dow{font-size:10.5px;text-align:center;color:var(--text-dimmer);padding-bottom:4px;font-weight:600;}
+  .cal-cell{
+    aspect-ratio:1/0.82;border-radius:8px;border:1px solid var(--border-soft);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;font-size:12px;position:relative;background:var(--card-bg-soft);
+    padding:3px;gap:2px;
+  }
+  .cal-cell:hover{border-color:var(--green);}
+  .cal-cell.empty{visibility:hidden;cursor:default;}
+  .cal-cell.sunday{border-color:var(--gold-border);box-shadow:inset 0 0 0 1.5px var(--gold-border);}
+  .cal-cell .d{font-weight:600;color:var(--text-dim);}
+  .cal-cell.has-session{background:var(--green-soft);}
+  .cal-cell.has-session .d{color:var(--green);}
+  .cal-cell .amt{font-size:9.5px;font-weight:700;color:var(--green);white-space:nowrap;}
+  .cal-cell.today{outline:2px solid var(--green);outline-offset:-2px;}
+
+  /* Weekly / session log table */
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .tbl th{text-align:left;color:var(--text-dim);font-weight:600;font-size:11px;padding:6px 8px;border-bottom:1px solid var(--border-soft);}
+  .tbl td{padding:9px 8px;border-bottom:1px solid var(--border-soft);}
+  .tbl tr:last-child td{border-bottom:none;}
+  .tbl tr.rowbtn{cursor:pointer;}
+  .tbl tr.rowbtn:hover{background:var(--card-bg-soft);}
+  .tbl td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .tbl td.pos{color:var(--green);font-weight:600;}
+  .tbl td.neg{color:var(--red);font-weight:600;}
+  .empty-state{padding:26px 10px;text-align:center;color:var(--text-dimmer);font-size:12.5px;}
+
+  /* Monthly bars */
+  .mbar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .mbar-label{width:64px;flex:0 0 auto;font-size:11.5px;color:var(--text-dim);}
+  .mbar-track{flex:1;height:20px;background:var(--card-bg-soft);border-radius:5px;overflow:hidden;}
+  .mbar-fill{height:100%;background:var(--green);border-radius:5px;}
+  .mbar-val{width:76px;flex:0 0 auto;text-align:right;font-size:11.5px;font-weight:600;color:var(--text);}
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,38,31,0.45);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:16px;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--card-bg);border-radius:16px;max-width:420px;width:100%;
+    padding:24px;max-height:90vh;overflow-y:auto;
+  }
+  .modal h3{margin:0 0 4px;font-size:17px;}
+  .modal .mclose{
+    float:right;background:none;border:none;font-size:18px;color:var(--text-dim);cursor:pointer;
+    line-height:1;padding:2px 6px;
+  }
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px;font-weight:600;}
+  .field input{
+    width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);
+    font-size:14px;color:var(--text);background:var(--card-bg-soft);
+  }
+  .field input:focus{outline:none;border-color:var(--green);}
+  .quickrow{display:flex;gap:8px;margin-bottom:10px;}
+  .qbtn{
+    flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
+    background:var(--card-bg-soft);cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text-dim);
+  }
+  .qbtn:hover{border-color:var(--green);color:var(--green);}
+  .qbtn.sel{background:var(--green);border-color:var(--green);color:#fdf9ec;}
+  .calcline{
+    display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-dim);
+    padding:8px 0;border-top:1px dashed var(--border);margin-top:2px;
+  }
+  .calcline b{color:var(--text);}
+  .netline{font-size:15px;font-weight:700;color:var(--green);}
+  .modal-actions{display:flex;gap:8px;margin-top:18px;}
+  .btn-save{
+    flex:1;padding:11px 0;border-radius:9px;border:none;background:var(--green);
+    color:#fdf9ec;font-weight:700;font-size:13.5px;cursor:pointer;
+  }
+  .btn-save:hover{opacity:0.92;}
+  .btn-del{
+    padding:11px 16px;border-radius:9px;border:1px solid var(--red);background:var(--red-soft);
+    color:var(--red);font-weight:600;font-size:13.5px;cursor:pointer;
+  }
+  .savestatus{font-size:11.5px;color:var(--text-dimmer);text-align:center;margin-top:8px;height:14px;}
+
+  @media (max-width:900px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+    .layout{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>♠ Sales Dashboard</h1>
+    <a class="backlink" href="https://kendilla2019.github.io/Spadepickleclub/">← Business Dashboard</a>
+    <button class="addbtn" id="openAddBtn">+ Add Session</button>
+  </div>
+  <p class="sub">Spade Pickle Club — every session tracked, court cost included. Default rate <b>₱300/player</b>, court rental <b>₱600/hr</b>.</p>
+
+  <div class="stat-grid">
+    <div class="stat green"><div class="label">Total sales</div><div class="value" id="statTotal">₱0</div></div>
+    <div class="stat green"><div class="label">This month</div><div class="value" id="statMonth">₱0</div></div>
+    <div class="stat gold"><div class="label">Last 7 days</div><div class="value" id="statWeek">₱0</div></div>
+    <div class="stat red"><div class="label">Total court cost</div><div class="value" id="statCost">₱0</div></div>
+    <div class="stat green"><div class="label">Net profit</div><div class="value" id="statNet">₱0</div></div>
+  </div>
+
+  <div class="layout">
+    <div class="card">
+      <div class="cal-head">
+        <div class="month" id="calMonthLabel">—</div>
+        <div class="cal-nav">
+          <button id="calPrev">‹</button>
+          <button id="calNext">›</button>
+        </div>
+      </div>
+      <div class="cal-grid" id="calDow"></div>
+      <div class="cal-grid" id="calGrid" style="margin-top:5px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Monthly sales</h2>
+      <p class="cardsub">Totals grouped by month</p>
+      <div id="monthlyBars"><div class="empty-state">No sessions logged yet.</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Session log</h2>
+    <p class="cardsub">Every session, most recent first. Tap a row to edit.</p>
+    <table class="tbl">
+      <thead>
+        <tr><th>Date</th><th class="num">Players</th><th class="num">Sales</th><th class="num">Court cost</th><th class="num">Net</th></tr>
+      </thead>
+      <tbody id="logBody">
+        <tr><td colspan="5"><div class="empty-state">Loading…</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="mclose" id="mClose">✕</button>
+    <h3 id="mTitle">Add session</h3>
+    <p class="cardsub" style="margin-bottom:16px;">Log players, sales, and court cost for this date.</p>
+
+    <div class="field">
+      <label>Date</label>
+      <input type="date" id="fDate">
+    </div>
+
+    <div class="field">
+      <label>Players</label>
+      <div class="quickrow">
+        <button class="qbtn" data-players="10">10</button>
+        <button class="qbtn" data-players="20">20</button>
+        <button class="qbtn" data-players="30">30</button>
+      </div>
+      <input type="number" id="fPlayers" min="0" placeholder="Player count">
+    </div>
+
+    <div class="field">
+      <label>Rate per player (₱)</label>
+      <input type="number" id="fRate" value="300">
+    </div>
+
+    <div class="field">
+      <label>Total sales (₱) — auto, editable</label>
+      <input type="number" id="fSales">
+    </div>
+
+    <div class="field">
+      <label>Court hours</label>
+      <input type="number" id="fHours" step="0.5" placeholder="e.g. 2">
+    </div>
+
+    <div class="field">
+      <label>Court rate per hour (₱)</label>
+      <input type="number" id="fCourtRate" value="600">
+    </div>
+
+    <div class="field">
+      <label>Court cost (₱) — auto, editable</label>
+      <input type="number" id="fCost">
+    </div>
+
+    <div class="calcline"><span>Net profit</span><b class="netline" id="fNet">₱0</b></div>
+
+    <div class="modal-actions">
+      <button class="btn-del" id="mDelete" style="display:none;">Delete</button>
+      <button class="btn-save" id="mSave">Save session</button>
+    </div>
+    <div class="savestatus" id="mStatus"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var sessions = {}; // dateStr -> data
+  var currentMonth = new Date(); currentMonth.setDate(1);
+  var editingDate = null;
+  var salesTouched = false, costTouched = false;
+
+  function pesos(n){
+    n = Math.round(n||0);
+    return "₱" + n.toLocaleString("en-US");
+  }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function ymOf(dateStr){ return dateStr.slice(0,7); }
+
+  // ---------- Rendering ----------
+  function renderStats(){
+    var total=0, cost=0, monthSum=0, weekSum=0;
+    var thisMonth = todayStr().slice(0,7);
+    var d7 = new Date(); d7.setDate(d7.getDate()-6);
+    var d7str = d7.getFullYear()+"-"+String(d7.getMonth()+1).padStart(2,"0")+"-"+String(d7.getDate()).padStart(2,"0");
+    Object.keys(sessions).forEach(function(k){
+      var s = sessions[k];
+      total += s.totalSales||0;
+      cost += s.courtCost||0;
+      if(ymOf(k)===thisMonth) monthSum += s.totalSales||0;
+      if(k >= d7str) weekSum += s.totalSales||0;
+    });
+    document.getElementById("statTotal").textContent = pesos(total);
+    document.getElementById("statMonth").textContent = pesos(monthSum);
+    document.getElementById("statWeek").textContent = pesos(weekSum);
+    document.getElementById("statCost").textContent = pesos(cost);
+    document.getElementById("statNet").textContent = pesos(total-cost);
+  }
+
+  function renderCalendar(){
+    var y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+    document.getElementById("calMonthLabel").textContent =
+      currentMonth.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+    var dowEl = document.getElementById("calDow");
+    if(!dowEl.dataset.built){
+      ["Su","Mo","Tu","We","Th","Fr","Sa"].forEach(function(d){
+        var c = document.createElement("div"); c.className="cal-dow"; c.textContent=d; dowEl.appendChild(c);
+      });
+      dowEl.dataset.built="1";
+    }
+    var grid = document.getElementById("calGrid");
+    grid.innerHTML = "";
+    var firstDow = new Date(y,m,1).getDay();
+    var daysInMonth = new Date(y,m+1,0).getDate();
+    var tstr = todayStr();
+    for(var i=0;i<firstDow;i++){
+      var e = document.createElement("div"); e.className="cal-cell empty"; grid.appendChild(e);
+    }
+    for(var day=1; day<=daysInMonth; day++){
+      var dateStr = y+"-"+String(m+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+      var cell = document.createElement("div");
+      var dow = new Date(y,m,day).getDay();
+      cell.className = "cal-cell" + (dow===0?" sunday":"") + (dateStr===tstr?" today":"");
+      var s = sessions[dateStr];
+      if(s){
+        cell.className += " has-session";
+        cell.innerHTML = '<div class="d">'+day+'</div><div class="amt">'+pesos(s.totalSales)+'</div>';
+      } else {
+        cell.innerHTML = '<div class="d">'+day+'</div>';
+      }
+      cell.addEventListener("click", function(ds){ return function(){ openModal(ds); }; }(dateStr));
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderLog(){
+    var body = document.getElementById("logBody");
+    var keys = Object.keys(sessions).sort().reverse();
+    if(keys.length===0){
+      body.innerHTML = '<tr><td colspan="5"><div class="empty-state">No sessions logged yet — click + Add Session or tap a calendar date.</div></td></tr>';
+      return;
+    }
+    body.innerHTML = "";
+    keys.forEach(function(k){
+      var s = sessions[k];
+      var net = (s.totalSales||0)-(s.courtCost||0);
+      var tr = document.createElement("tr");
+      tr.className = "rowbtn";
+      var dLabel = new Date(k+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+      tr.innerHTML = "<td>"+dLabel+"</td>"+
+        "<td class='num'>"+(s.players||0)+"</td>"+
+        "<td class='num'>"+pesos(s.totalSales)+"</td>"+
+        "<td class='num'>"+pesos(s.courtCost)+"</td>"+
+        "<td class='num "+(net>=0?"pos":"neg")+"'>"+pesos(net)+"</td>";
+      tr.addEventListener("click", function(ds){ return function(){ openModal(ds); }; }(k));
+      body.appendChild(tr);
+    });
+  }
+
+  function renderMonthly(){
+    var wrap = document.getElementById("monthlyBars");
+    var byMonth = {};
+    Object.keys(sessions).forEach(function(k){
+      var ym = ymOf(k);
+      byMonth[ym] = (byMonth[ym]||0) + (sessions[k].totalSales||0);
+    });
+    var months = Object.keys(byMonth).sort();
+    if(months.length===0){
+      wrap.innerHTML = '<div class="empty-state">No sessions logged yet.</div>';
+      return;
+    }
+    var max = Math.max.apply(null, months.map(function(m){return byMonth[m];}));
+    wrap.innerHTML = "";
+    months.forEach(function(ym){
+      var label = new Date(ym+"-01T00:00:00").toLocaleDateString("en-US",{month:"short",year:"2-digit"});
+      var val = byMonth[ym];
+      var pct = max>0 ? Math.max(4,(val/max*100)) : 0;
+      var row = document.createElement("div");
+      row.className = "mbar-row";
+      row.innerHTML = '<div class="mbar-label">'+label+'</div>'+
+        '<div class="mbar-track"><div class="mbar-fill" style="width:'+pct+'%;"></div></div>'+
+        '<div class="mbar-val">'+pesos(val)+'</div>';
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderAll(){
+    renderStats(); renderCalendar(); renderLog(); renderMonthly();
+  }
+
+  // ---------- Modal ----------
+  function computeSales(){
+    if(salesTouched) return;
+    var p = parseFloat(document.getElementById("fPlayers").value)||0;
+    var r = parseFloat(document.getElementById("fRate").value)||0;
+    document.getElementById("fSales").value = Math.round(p*r);
+    computeNet();
+  }
+  function computeCost(){
+    if(costTouched) return;
+    var h = parseFloat(document.getElementById("fHours").value)||0;
+    var r = parseFloat(document.getElementById("fCourtRate").value)||0;
+    document.getElementById("fCost").value = Math.round(h*r);
+    computeNet();
+  }
+  function computeNet(){
+    var sales = parseFloat(document.getElementById("fSales").value)||0;
+    var cost = parseFloat(document.getElementById("fCost").value)||0;
+    document.getElementById("fNet").textContent = pesos(sales-cost);
+  }
+
+  function openModal(dateStr){
+    editingDate = dateStr;
+    salesTouched = false; costTouched = false;
+    var existing = sessions[dateStr];
+    document.getElementById("fDate").value = dateStr;
+    document.querySelectorAll(".qbtn").forEach(function(b){b.classList.remove("sel");});
+    if(existing){
+      document.getElementById("mTitle").textContent = "Edit session";
+      document.getElementById("fPlayers").value = existing.players||0;
+      document.getElementById("fRate").value = existing.ratePerPlayer||300;
+      document.getElementById("fSales").value = existing.totalSales||0;
+      document.getElementById("fHours").value = existing.courtHours||"";
+      document.getElementById("fCourtRate").value = existing.courtRate||600;
+      document.getElementById("fCost").value = existing.courtCost||0;
+      salesTouched = true; costTouched = true; // preserve saved values, don't auto-overwrite on open
+      document.getElementById("mDelete").style.display = "block";
+      var q = document.querySelector('.qbtn[data-players="'+existing.players+'"]');
+      if(q) q.classList.add("sel");
+    } else {
+      document.getElementById("mTitle").textContent = "Add session";
+      document.getElementById("fPlayers").value = "";
+      document.getElementById("fRate").value = 300;
+      document.getElementById("fSales").value = 0;
+      document.getElementById("fHours").value = "";
+      document.getElementById("fCourtRate").value = 600;
+      document.getElementById("fCost").value = 0;
+      document.getElementById("mDelete").style.display = "none";
+    }
+    computeNet();
+    document.getElementById("mStatus").textContent = "";
+    document.getElementById("overlay").classList.add("open");
+  }
+  function closeModal(){
+    document.getElementById("overlay").classList.remove("open");
+    editingDate = null;
+  }
+
+  document.getElementById("openAddBtn").addEventListener("click", function(){ openModal(todayStr()); });
+  document.getElementById("mClose").addEventListener("click", closeModal);
+  document.getElementById("overlay").addEventListener("click", function(e){ if(e.target.id==="overlay") closeModal(); });
+
+  document.querySelectorAll(".qbtn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".qbtn").forEach(function(b){b.classList.remove("sel");});
+      btn.classList.add("sel");
+      document.getElementById("fPlayers").value = btn.dataset.players;
+      salesTouched = false;
+      computeSales();
+    });
+  });
+  document.getElementById("fPlayers").addEventListener("input", function(){ salesTouched=false; computeSales(); });
+  document.getElementById("fRate").addEventListener("input", function(){ salesTouched=false; computeSales(); });
+  document.getElementById("fSales").addEventListener("input", function(){ salesTouched=true; computeNet(); });
+  document.getElementById("fHours").addEventListener("input", function(){ costTouched=false; computeCost(); });
+  document.getElementById("fCourtRate").addEventListener("input", function(){ costTouched=false; computeCost(); });
+  document.getElementById("fCost").addEventListener("input", function(){ costTouched=true; computeNet(); });
+  document.getElementById("fDate").addEventListener("change", function(){
+    var nd = this.value;
+    if(nd && nd!==editingDate){
+      editingDate = nd;
+      var existing = sessions[nd];
+      if(existing){
+        document.getElementById("mTitle").textContent = "Edit session";
+        document.getElementById("fPlayers").value = existing.players||0;
+        document.getElementById("fRate").value = existing.ratePerPlayer||300;
+        document.getElementById("fSales").value = existing.totalSales||0;
+        document.getElementById("fHours").value = existing.courtHours||"";
+        document.getElementById("fCourtRate").value = existing.courtRate||600;
+        document.getElementById("fCost").value = existing.courtCost||0;
+        salesTouched = true; costTouched = true;
+        document.getElementById("mDelete").style.display = "block";
+      } else {
+        document.getElementById("mTitle").textContent = "Add session";
+        document.getElementById("mDelete").style.display = "none";
+      }
+      computeNet();
+    }
+  });
+
+  document.getElementById("mSave").addEventListener("click", function(){
+    if(!editingDate){ return; }
+    var data = {
+      date: editingDate,
+      players: parseFloat(document.getElementById("fPlayers").value)||0,
+      ratePerPlayer: parseFloat(document.getElementById("fRate").value)||0,
+      totalSales: parseFloat(document.getElementById("fSales").value)||0,
+      courtHours: parseFloat(document.getElementById("fHours").value)||0,
+      courtRate: parseFloat(document.getElementById("fCourtRate").value)||0,
+      courtCost: parseFloat(document.getElementById("fCost").value)||0,
+      updatedAt: Date.now()
+    };
+    var statusEl = document.getElementById("mStatus");
+    statusEl.textContent = "Saving…";
+    saveSession(data).then(function(){
+      statusEl.textContent = "Saved.";
+      setTimeout(closeModal, 350);
+    }).catch(function(err){
+      statusEl.textContent = "Couldn't save — " + (err.message||"try again.");
+    });
+  });
+
+  document.getElementById("mDelete").addEventListener("click", function(){
+    if(!editingDate) return;
+    var statusEl = document.getElementById("mStatus");
+    statusEl.textContent = "Deleting…";
+    deleteSession(editingDate).then(function(){
+      closeModal();
+    }).catch(function(err){
+      statusEl.textContent = "Couldn't delete — " + (err.message||"try again.");
+    });
+  });
+
+  document.getElementById("calPrev").addEventListener("click", function(){
+    currentMonth.setMonth(currentMonth.getMonth()-1); renderCalendar();
+  });
+  document.getElementById("calNext").addEventListener("click", function(){
+    currentMonth.setMonth(currentMonth.getMonth()+1); renderCalendar();
+  });
+
+  // ---------- Supabase config ----------
+  // Paste your project's values here after creating the "sessions" table.
+  // Settings → API in your Supabase project dashboard.
+  var SUPABASE_URL = "https://zqumzdqeuikwwwksozntz.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_W3MxRtC6pLfvWXANZXy5cw_vWk7h6Cy";
+
+  var supa = null;
+  if(window.supabase && SUPABASE_URL.indexOf("PASTE_") !== 0){
+    supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
+  function rowToSession(r){
+    return {
+      date: r.date,
+      players: r.players,
+      ratePerPlayer: r.rate_per_player,
+      totalSales: r.total_sales,
+      courtHours: r.court_hours,
+      courtRate: r.court_rate,
+      courtCost: r.court_cost,
+      updatedAt: r.updated_at
+    };
+  }
+  function sessionToRow(s){
+    return {
+      date: s.date,
+      players: s.players,
+      rate_per_player: s.ratePerPlayer,
+      total_sales: s.totalSales,
+      court_hours: s.courtHours,
+      court_rate: s.courtRate,
+      court_cost: s.courtCost,
+      updated_at: s.updatedAt
+    };
+  }
+
+  async function loadAll(){
+    if(!supa){
+      document.getElementById("logBody").innerHTML =
+        '<tr><td colspan="5"><div class="empty-state">Supabase isn\'t configured yet — paste your project URL and anon key into the script near the bottom of this file.</div></td></tr>';
+      renderAll();
+      return;
+    }
+    var res = await supa.from("sessions").select("*");
+    if(res.error){
+      document.getElementById("mStatus").textContent = "";
+      document.getElementById("logBody").innerHTML =
+        '<tr><td colspan="5"><div class="empty-state">Couldn\'t load sessions: '+res.error.message+'</div></td></tr>';
+      return;
+    }
+    sessions = {};
+    (res.data||[]).forEach(function(r){ sessions[r.date] = rowToSession(r); });
+    renderAll();
+  }
+
+  async function saveSession(data){
+    if(!supa) throw new Error("Supabase not configured");
+    var row = sessionToRow(data);
+    var res = await supa.from("sessions").upsert(row, {onConflict:"date"});
+    if(res.error) throw res.error;
+  }
+
+  async function deleteSession(dateStr){
+    if(!supa) throw new Error("Supabase not configured");
+    var res = await supa.from("sessions").delete().eq("date", dateStr);
+    if(res.error) throw res.error;
+  }
+
+  // ---------- DB wiring ----------
+  function init(){
+    loadAll();
+    if(supa){
+      // Live sync across devices/tabs
+      supa.channel("sessions-changes")
+        .on("postgres_changes", {event:"*", schema:"public", table:"sessions"}, function(){
+          loadAll();
+        })
+        .subscribe();
+    }
+  }
+
+  renderAll();
+  init();
+})();
+</script>
+</body>
+</html>
